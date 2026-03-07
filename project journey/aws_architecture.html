@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Production AWS Architecture — Malayalam Chatbot</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #07090f;
+    --surface: #0d1018;
+    --card: #111520;
+    --border: #1c2235;
+    --border2: #242d45;
+    --aws: #FF9900;
+    --aws2: #232F3E;
+    --green: #00e5a0;
+    --red: #ff4d6d;
+    --blue: #4d9fff;
+    --purple: #a78bfa;
+    --yellow: #fbbf24;
+    --text: #dde3f0;
+    --muted: #56617a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    padding: 48px 20px 100px;
+  }
+
+  /* ── HEADER ── */
+  header { text-align: center; margin-bottom: 60px; }
+  .pill {
+    display: inline-block;
+    background: rgba(255,153,0,0.1);
+    border: 1px solid rgba(255,153,0,0.3);
+    color: var(--aws);
+    font-size: 10px; letter-spacing: 3px;
+    text-transform: uppercase;
+    padding: 5px 16px; border-radius: 2px;
+    margin-bottom: 18px;
+  }
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(24px, 4vw, 42px);
+    font-weight: 800; line-height: 1.1;
+    margin-bottom: 10px;
+  }
+  h1 em { color: var(--aws); font-style: normal; }
+  .sub { color: var(--muted); font-size: 12px; }
+
+  /* ── TABS ── */
+  .tabs {
+    display: flex; gap: 4px;
+    max-width: 980px; margin: 0 auto 32px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px; padding: 5px;
+  }
+  .tab {
+    flex: 1; text-align: center;
+    padding: 10px 8px;
+    font-size: 11px; letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s;
+    font-weight: 500;
+  }
+  .tab:hover { color: var(--text); background: rgba(255,255,255,0.03); }
+  .tab.active {
+    background: rgba(255,153,0,0.12);
+    color: var(--aws);
+    border: 1px solid rgba(255,153,0,0.25);
+  }
+
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* ── SECTION ── */
+  .section { max-width: 980px; margin: 0 auto 36px; }
+  .sec-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 11px; font-weight: 700;
+    letter-spacing: 2.5px; text-transform: uppercase;
+    color: var(--muted);
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 18px;
+  }
+  .sec-title::after { content:''; flex:1; height:1px; background:var(--border); }
+
+  /* ── ARCHITECTURE DIAGRAM ── */
+  .arch-diagram {
+    max-width: 980px; margin: 0 auto 40px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 32px 24px;
+    overflow-x: auto;
+  }
+
+  .flow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    flex-wrap: nowrap;
+    min-width: 700px;
+  }
+
+  .node {
+    display: flex; flex-direction: column;
+    align-items: center; text-align: center;
+    gap: 6px;
+  }
+  .node-box {
+    width: 90px; min-height: 70px;
+    border-radius: 6px;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 10px 6px; gap: 5px;
+    border: 1px solid transparent;
+    font-size: 10px; font-weight: 500;
+    line-height: 1.35;
+  }
+  .node-icon { font-size: 22px; }
+  .node-label {
+    font-size: 9px; letter-spacing: 1px;
+    text-transform: uppercase; color: var(--muted);
+    margin-top: 6px; max-width: 90px;
+  }
+
+  /* node colours */
+  .n-user   { background: rgba(77,159,255,0.08); border-color: rgba(77,159,255,0.25); color: var(--blue); }
+  .n-gw     { background: rgba(255,153,0,0.08);  border-color: rgba(255,153,0,0.3);   color: var(--aws); }
+  .n-lambda { background: rgba(255,153,0,0.08);  border-color: rgba(255,153,0,0.3);   color: var(--aws); }
+  .n-cache  { background: rgba(0,229,160,0.07);  border-color: rgba(0,229,160,0.25);  color: var(--green); }
+  .n-hf     { background: rgba(167,139,250,0.08);border-color: rgba(167,139,250,0.25);color: var(--purple); }
+  .n-claude { background: rgba(255,77,109,0.08); border-color: rgba(255,77,109,0.25); color: #ff8fa0; }
+  .n-secret { background: rgba(251,191,36,0.08); border-color: rgba(251,191,36,0.25); color: var(--yellow); }
+  .n-log    { background: rgba(77,159,255,0.06); border-color: rgba(77,159,255,0.2);  color: var(--blue); }
+
+  .arrow {
+    color: var(--border2);
+    font-size: 20px;
+    padding: 0 4px;
+    color: var(--muted);
+    flex-shrink: 0;
+  }
+  .arrow-label {
+    font-size: 9px; color: var(--muted);
+    letter-spacing: 0.5px; margin-top: 2px;
+  }
+
+  /* branch for parallel services */
+  .branch-col {
+    display: flex; flex-direction: column;
+    gap: 12px; align-items: center;
+  }
+  .branch-connector {
+    width: 1px; height: 20px;
+    background: var(--border2);
+  }
+
+  /* ── SERVICE CARDS ── */
+  .service-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 14px;
+  }
+  .svc-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .svc-header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+  }
+  .svc-icon { font-size: 20px; }
+  .svc-name {
+    font-family: 'Syne', sans-serif;
+    font-size: 13px; font-weight: 700;
+  }
+  .svc-aws {
+    margin-left: auto;
+    font-size: 9px; letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding: 3px 8px; border-radius: 2px;
+    background: rgba(255,153,0,0.1);
+    color: var(--aws);
+    border: 1px solid rgba(255,153,0,0.2);
+  }
+  .svc-body { padding: 16px 18px; }
+  .svc-row {
+    display: flex; gap: 10px;
+    font-size: 11px; line-height: 1.6;
+    margin-bottom: 8px; color: var(--muted);
+  }
+  .svc-row:last-child { margin-bottom: 0; }
+  .svc-row .dot { color: var(--aws); flex-shrink: 0; }
+  .svc-row strong { color: var(--text); }
+
+  /* ── MIGRATION STEPS ── */
+  .steps { max-width: 980px; margin: 0 auto; }
+  .step {
+    display: grid;
+    grid-template-columns: 52px 1fr;
+    gap: 0;
+    margin-bottom: 0;
+    position: relative;
+  }
+  .step:not(:last-child) .step-line {
+    position: absolute;
+    left: 25px; top: 52px; bottom: 0;
+    width: 2px;
+    background: var(--border);
+  }
+  .step-num {
+    width: 50px; height: 50px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Syne', sans-serif;
+    font-size: 15px; font-weight: 800;
+    flex-shrink: 0; z-index: 1;
+  }
+  .step-body {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 18px 20px;
+    margin-left: 16px;
+    margin-bottom: 16px;
+  }
+  .step-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 14px; font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .step-desc { font-size: 11.5px; color: var(--muted); line-height: 1.7; margin-bottom: 12px; }
+  .code-block {
+    background: rgba(0,0,0,0.45);
+    border-radius: 4px; padding: 12px 14px;
+    font-size: 11px; line-height: 1.7;
+    border-left: 2px solid var(--aws);
+    white-space: pre-wrap; word-break: break-word;
+    color: #ffd580;
+    overflow-x: auto;
+  }
+  .step-tags { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .stag {
+    font-size: 9px; letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding: 3px 8px; border-radius: 2px;
+  }
+  .stag-aws { background: rgba(255,153,0,0.1); color: var(--aws); }
+  .stag-green { background: rgba(0,229,160,0.08); color: var(--green); }
+  .stag-blue { background: rgba(77,159,255,0.08); color: var(--blue); }
+
+  /* ── COMPARISON TABLE ── */
+  .comp-table {
+    width: 100%; border-collapse: collapse;
+    font-size: 12px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px; overflow: hidden;
+  }
+  .comp-table th {
+    padding: 13px 18px;
+    text-align: left;
+    font-size: 10px; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--muted);
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+  .comp-table td {
+    padding: 14px 18px;
+    border-bottom: 1px solid rgba(28,34,53,0.7);
+    vertical-align: top; line-height: 1.6;
+  }
+  .comp-table tr:last-child td { border-bottom: none; }
+  .comp-table tr:hover td { background: rgba(255,255,255,0.015); }
+  .before { color: #ff8fa0; font-size: 11px; }
+  .after  { color: #7fffd4; font-size: 11px; }
+  .badge {
+    display: inline-block;
+    font-size: 9px; padding: 2px 7px;
+    border-radius: 2px; font-weight: 600;
+    letter-spacing: 1px; text-transform: uppercase;
+  }
+  .b-green { background: rgba(0,229,160,0.1); color: var(--green); }
+  .b-aws   { background: rgba(255,153,0,0.1); color: var(--aws); }
+  .b-blue  { background: rgba(77,159,255,0.1); color: var(--blue); }
+
+  /* ── COST ESTIMATE ── */
+  .cost-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+  }
+  .cost-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 18px 16px;
+    text-align: center;
+  }
+  .cost-card::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 9px; letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted); margin-bottom: 10px;
+  }
+  .cost-num {
+    font-family: 'Syne', sans-serif;
+    font-size: 22px; font-weight: 800;
+    margin-bottom: 4px;
+  }
+  .cost-sub { font-size: 10px; color: var(--muted); }
+
+</style>
+</head>
+<body>
+
+<header>
+  <div class="pill">Production Grade · AWS Architecture</div>
+  <h1>From CLI Script to<br><em>Production on AWS</em></h1>
+  <p class="sub">Malayalam Training Institute Chatbot · Full migration path</p>
+</header>
+
+<!-- TABS -->
+<div class="tabs">
+  <div class="tab active" onclick="showTab('arch')">Architecture</div>
+  <div class="tab" onclick="showTab('services')">AWS Services</div>
+  <div class="tab" onclick="showTab('steps')">Migration Steps</div>
+  <div class="tab" onclick="showTab('compare')">Before vs After</div>
+  <div class="tab" onclick="showTab('cost')">AWS Cost</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- TAB 1 — ARCHITECTURE -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div id="tab-arch" class="tab-content active">
+
+  <div class="section">
+    <div class="sec-title">System Flow Diagram</div>
+  </div>
+
+  <div class="arch-diagram">
+    <div class="flow">
+
+      <!-- User -->
+      <div class="node">
+        <div class="node-box n-user">
+          <div class="node-icon">📱</div>
+          <div>WhatsApp / Web / App</div>
+        </div>
+        <div class="node-label">Student</div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;align-items:center">
+        <div class="arrow">→</div>
+        <div class="arrow-label">HTTPS</div>
+      </div>
+
+      <!-- API Gateway -->
+      <div class="node">
+        <div class="node-box n-gw">
+          <div class="node-icon">🚪</div>
+          <div>API Gateway</div>
+        </div>
+        <div class="node-label">Rate Limit · Auth</div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;align-items:center">
+        <div class="arrow">→</div>
+        <div class="arrow-label">trigger</div>
+      </div>
+
+      <!-- Lambda -->
+      <div class="node">
+        <div class="node-box n-lambda">
+          <div class="node-icon">λ</div>
+          <div>Lambda Router</div>
+        </div>
+        <div class="node-label">main.py logic</div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;align-items:center">
+        <div class="arrow">→</div>
+        <div class="arrow-label">check</div>
+      </div>
+
+      <!-- ElastiCache -->
+      <div class="node">
+        <div class="node-box n-cache">
+          <div class="node-icon">⚡</div>
+          <div>ElastiCache Redis</div>
+        </div>
+        <div class="node-label">Reply Cache</div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;align-items:center">
+        <div class="arrow">→</div>
+        <div class="arrow-label">miss →</div>
+      </div>
+
+      <!-- Parallel: HF + Claude -->
+      <div class="branch-col">
+        <div class="node">
+          <div class="node-box n-hf" style="width:100px">
+            <div class="node-icon">🤗</div>
+            <div>ECS Fargate</div>
+          </div>
+          <div class="node-label">hf_local.py</div>
+        </div>
+        <div class="branch-connector"></div>
+        <div class="node">
+          <div class="node-box n-claude" style="width:100px">
+            <div class="node-icon">🤖</div>
+            <div>Claude API</div>
+          </div>
+          <div class="node-label">claude_service.py</div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;align-items:center">
+        <div class="arrow">→</div>
+      </div>
+
+      <!-- Side services -->
+      <div class="branch-col">
+        <div class="node">
+          <div class="node-box n-secret" style="width:100px">
+            <div class="node-icon">🔐</div>
+            <div>Secrets Manager</div>
+          </div>
+          <div class="node-label">CLAUDE_API_KEY</div>
+        </div>
+        <div class="branch-connector"></div>
+        <div class="node">
+          <div class="node-box n-log" style="width:100px">
+            <div class="node-icon">📊</div>
+            <div>CloudWatch</div>
+          </div>
+          <div class="node-label">Logs · Alerts</div>
+        </div>
+      </div>
+
+    </div>
+
+    <div style="text-align:center;margin-top:24px;font-size:10px;color:var(--muted);letter-spacing:1px;">
+      Cache HIT → reply returned instantly, Claude never called &nbsp;·&nbsp;
+      Cache MISS → HF hint + Claude → store result → reply
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="sec-title">What each layer does</div>
+    <div class="service-grid">
+      <div class="svc-card">
+        <div class="svc-header">
+          <div class="svc-icon">🚪</div>
+          <div class="svc-name">API Gateway</div>
+          <div class="svc-aws">AWS</div>
+        </div>
+        <div class="svc-body">
+          <div class="svc-row"><span class="dot">▸</span><span>Receives all HTTPS requests from WhatsApp/web</span></div>
+          <div class="svc-row"><span class="dot">▸</span><span>Rate limiting — blocks abuse & cost spikes</span></div>
+          <div class="svc-row"><span class="dot">▸</span><span>API key auth for your web/app clients</span></div>
+          <div class="svc-row"><span class="dot">▸</span><span>Triggers Lambda automatically</span></div>
+        </div>
+      </div>
+      <div class="svc-card">
+        <div class="svc-header">
+          <div class="svc-icon">λ</div>
+          <div class="svc-name">AWS Lambda</div>
+          <div class="svc-aws">AWS</div>
+        </div>
+        <div class="svc-body">
+          <div class="svc-row"><span class="dot">▸</span><span>Replaces your <strong>main.py</strong> loop — runs per request</span></div>
+          <div class="svc-row"><span class="dot">▸</span><span>Checks Redis cache first → calls ECS if miss</span></div>
+          <div class="svc-row"><span class="dot">▸</span><span>Scales to 0 when idle — <strong>you pay nothing</strong></span></div>
+          <div class="svc-row"><span class="dot">▸</span><span>Free tier: 1M requests/month</span></div>
+        </div>
+      </div>
+      <div class="svc-card">
+        <div class="svc-header">
+          <div class="svc-icon">⚡</div>
+          <div class="svc-name">ElastiCache (Redis)</div>
+          <div class="svc-aws">AWS</div>
+        </div>
+        <div class="svc-body">
+          <div class="svc-row"><span class="dot">▸</span><span>Stores Claude replies by message hash</span></div>
+          <div class="svc-row"><span class="dot">▸</span><span>Cache hits cost <strong>₹0 Claude API</strong></span></div>
+          <div class="svc-row"><span class="dot">▸</span><span>TTL = 24h (stale answers auto-expire)</span></div>
+          <div class="svc-row"><span class="dot">▸</span><span>Sub-millisecond response for repeats</span></div>
+        </div>
+      </div>
+      <div class="svc-card">
+        <div class="svc-header">
+          <div class="svc-icon">🤗</div>
+          <div class="svc-name">ECS Fargate</div>
+          <div class="svc-aws">AWS</div>
+        </div>
+        <div class="svc-body">
+          <div class="svc-row"><span class="dot">▸</span><span>Hosts your <strong>hf_local.py</strong> as a microservice</span></div>
+          <div class="svc-row"><span class="dot">▸</span><span>xlm-roberta model loaded once, always warm</span></div>
+          <div class="svc-row"><span class="dot">▸</span><span>No more 5-6s cold start — model stays alive</span></div>
+          <div class="svc-row"><span class="dot">▸</span><span>Returns lang + hint via internal HTTP call</span></div>
+        </div>
+      </div>
+      <div class="svc-card">
+        <div class="svc-header">
+          <div class="svc-icon">🔐</div>
+          <div class="svc-name">Secrets Manager</div>
+          <div class="svc-aws">AWS</div>
+        </div>
+        <div class="svc-body">
+          <div class="svc-row"><span class="dot">▸</span><span>Replaces your <strong>.env file</strong> entirely</span></div>
+          <div class="svc-row"><span class="dot">▸</span><span>CLAUDE_API_KEY never in code or environment</span></div>
+          <div class="svc-row"><span class="dot">▸</span><span>Auto-rotation support for API keys</span></div>
+          <div class="svc-row"><span class="dot">▸</span><span>IAM role-based access — no hardcoding ever</span></div>
+        </div>
+      </div>
+      <div class="svc-card">
+        <div class="svc-header">
+          <div class="svc-icon">📊</div>
+          <div class="svc-name">CloudWatch</div>
+          <div class="svc-aws">AWS</div>
+        </div>
+        <div class="svc-body">
+          <div class="svc-row"><span class="dot">▸</span><span>Logs every intent, reply, latency, error</span></div>
+          <div class="svc-row"><span class="dot">▸</span><span>Alerts when Claude errors spike</span></div>
+          <div class="svc-row"><span class="dot">▸</span><span>Dashboard: cache hit rate, top intents</span></div>
+          <div class="svc-row"><span class="dot">▸</span><span>Cost anomaly alerts if API bill spikes</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- TAB 2 — AWS SERVICES -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div id="tab-services" class="tab-content">
+  <div class="section">
+    <div class="sec-title">Your Code → AWS Service Mapping</div>
+    <table class="comp-table">
+      <thead>
+        <tr>
+          <th>Your Current File</th>
+          <th>What It Does Now</th>
+          <th>AWS Replacement</th>
+          <th>Why</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>main.py</strong><br><span style="color:var(--muted);font-size:10px">while True loop</span></td>
+          <td class="before">CLI loop, blocks on input(), single user only</td>
+          <td><span class="badge b-aws">AWS Lambda</span><br><span style="font-size:10px;color:var(--muted)">+ API Gateway</span></td>
+          <td class="after">Handles thousands of concurrent users, scales to zero, no server to manage</td>
+        </tr>
+        <tr>
+          <td><strong>hf_local.py</strong><br><span style="color:var(--muted);font-size:10px">xlm-roberta model</span></td>
+          <td class="before">Loads model fresh every run, 5-6s cold start, only on your machine</td>
+          <td><span class="badge b-aws">ECS Fargate</span><br><span style="font-size:10px;color:var(--muted)">containerised microservice</span></td>
+          <td class="after">Model stays loaded in memory permanently, instant response, accessible over internal HTTP</td>
+        </tr>
+        <tr>
+          <td><strong>claude_service.py</strong><br><span style="color:var(--muted);font-size:10px">API calls</span></td>
+          <td class="before">No caching, called on every single message</td>
+          <td><span class="badge b-green">ElastiCache Redis</span><br><span style="font-size:10px;color:var(--muted)">+ Claude API (unchanged)</span></td>
+          <td class="after">Cache layer intercepts repeat questions — Claude API only called on true cache misses</td>
+        </tr>
+        <tr>
+          <td><strong>config.py / .env</strong><br><span style="color:var(--muted);font-size:10px">API keys</span></td>
+          <td class="before">Keys in .env file on local machine — risky if committed</td>
+          <td><span class="badge b-aws">Secrets Manager</span></td>
+          <td class="after">Keys stored encrypted in AWS, rotated automatically, never in code</td>
+        </tr>
+        <tr>
+          <td><strong>requirements.txt</strong><br><span style="color:var(--muted);font-size:10px">dependencies</span></td>
+          <td class="before">Installed manually with pip on local machine</td>
+          <td><span class="badge b-blue">Docker + ECR</span><br><span style="font-size:10px;color:var(--muted)">Elastic Container Registry</span></td>
+          <td class="after">Containerised — same environment in dev and prod, no "works on my machine"</td>
+        </tr>
+        <tr>
+          <td><strong>print() / logging</strong><br><span style="color:var(--muted);font-size:10px">debug output</span></td>
+          <td class="before">Prints to terminal only, lost after session ends</td>
+          <td><span class="badge b-aws">CloudWatch Logs</span></td>
+          <td class="after">Persistent logs, searchable, alerting on errors, dashboard for intent analytics</td>
+        </tr>
+        <tr>
+          <td><strong>(none)</strong><br><span style="color:var(--muted);font-size:10px">no CI/CD</span></td>
+          <td class="before">Manual deployment — copy files to server by hand</td>
+          <td><span class="badge b-aws">CodePipeline</span><br><span style="font-size:10px;color:var(--muted)">+ GitHub Actions</span></td>
+          <td class="after">Push to GitHub → auto test → auto deploy to AWS. Zero manual steps.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- TAB 3 — MIGRATION STEPS -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div id="tab-steps" class="tab-content">
+  <div class="section">
+    <div class="sec-title">Step-by-Step Migration</div>
+  </div>
+  <div class="steps">
+
+    <div class="step">
+      <div class="step-line"></div>
+      <div class="step-num" style="background:rgba(255,153,0,0.15);color:var(--aws)">1</div>
+      <div class="step-body">
+        <div class="step-title">Dockerise hf_local.py as a microservice</div>
+        <div class="step-desc">Wrap your HuggingFace model in a FastAPI app and a Dockerfile. This becomes your ECS container — model stays warm in memory permanently, no cold starts.</div>
+        <div class="code-block"># hf_service/app.py
+from fastapi import FastAPI
+from hf_local import get_hint
+
+app = FastAPI()
+
+@app.post("/hint")
+def hint(payload: dict):
+    lang, hint = get_hint(payload["text"])
+    return {"lang": lang, "hint": hint}
+
+# Dockerfile
+FROM python:3.11-slim
+COPY . /app
+WORKDIR /app
+RUN pip install fastapi uvicorn transformers torch
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]</div>
+        <div class="step-tags">
+          <span class="stag stag-aws">ECS Fargate</span>
+          <span class="stag stag-blue">Docker</span>
+          <span class="stag stag-green">Fixes cold start</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-line"></div>
+      <div class="step-num" style="background:rgba(255,153,0,0.15);color:var(--aws)">2</div>
+      <div class="step-body">
+        <div class="step-title">Push Docker image to ECR</div>
+        <div class="step-desc">Amazon ECR is AWS's private Docker registry. Push your image here — ECS will pull from it automatically on deploy.</div>
+        <div class="code-block"># Create ECR repo
+aws ecr create-repository --repository-name malayalam-hf-service
+
+# Authenticate, build, tag, push
+aws ecr get-login-password | docker login --username AWS \
+  --password-stdin &lt;account&gt;.dkr.ecr.ap-south-1.amazonaws.com
+
+docker build -t malayalam-hf-service .
+docker tag malayalam-hf-service:latest \
+  &lt;account&gt;.dkr.ecr.ap-south-1.amazonaws.com/malayalam-hf-service:latest
+docker push &lt;account&gt;.dkr.ecr.ap-south-1.amazonaws.com/malayalam-hf-service:latest</div>
+        <div class="step-tags">
+          <span class="stag stag-aws">ECR</span>
+          <span class="stag stag-blue">ap-south-1 (Mumbai)</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-line"></div>
+      <div class="step-num" style="background:rgba(255,153,0,0.15);color:var(--aws)">3</div>
+      <div class="step-body">
+        <div class="step-title">Store API key in Secrets Manager</div>
+        <div class="step-desc">Remove CLAUDE_API_KEY from .env forever. Store it in AWS Secrets Manager — Lambda fetches it at runtime via IAM role. No key in code, no key in environment variables.</div>
+        <div class="code-block"># Store the secret
+aws secretsmanager create-secret \
+  --name "prod/chatbot/claude-api-key" \
+  --secret-string '{"CLAUDE_API_KEY":"sk-ant-..."}'
+
+# In config.py — replace dotenv with:
+import boto3, json
+
+def get_secret():
+    client = boto3.client("secretsmanager", region_name="ap-south-1")
+    secret = client.get_secret_value(SecretId="prod/chatbot/claude-api-key")
+    return json.loads(secret["SecretString"])["CLAUDE_API_KEY"]
+
+CLAUDE_KEY = get_secret()</div>
+        <div class="step-tags">
+          <span class="stag stag-aws">Secrets Manager</span>
+          <span class="stag stag-green">Zero key exposure</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-line"></div>
+      <div class="step-num" style="background:rgba(255,153,0,0.15);color:var(--aws)">4</div>
+      <div class="step-body">
+        <div class="step-title">Convert main.py loop → Lambda handler</div>
+        <div class="step-desc">Replace the while True loop with a Lambda handler function. API Gateway calls this for every incoming message. Includes Redis cache check before hitting Claude.</div>
+        <div class="code-block"># lambda_handler.py
+import json, hashlib, redis
+from hf_client import get_hint_remote   # calls ECS microservice
+from claude_service import ask_claude
+
+redis_client = redis.Redis(host=REDIS_HOST, port=6379, decode_responses=True)
+
+def handler(event, context):
+    body = json.loads(event["body"])
+    message = body["message"]
+
+    # 1. Check cache first
+    cache_key = hashlib.md5(message.encode()).hexdigest()
+    cached = redis_client.get(cache_key)
+    if cached:
+        return {"statusCode": 200, "body": cached}  # free reply ⚡
+
+    # 2. Get intent hint from ECS
+    lang, hint = get_hint_remote(message)
+
+    # 3. Call Claude
+    intent, reply = ask_claude(message, hint)
+
+    # 4. Cache result for 24h
+    redis_client.setex(cache_key, 86400, json.dumps({"intent": intent, "reply": reply}))
+
+    return {"statusCode": 200, "body": json.dumps({"reply": reply})}</div>
+        <div class="step-tags">
+          <span class="stag stag-aws">Lambda</span>
+          <span class="stag stag-green">Redis Cache</span>
+          <span class="stag stag-blue">Replaces main.py</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-line"></div>
+      <div class="step-num" style="background:rgba(255,153,0,0.15);color:var(--aws)">5</div>
+      <div class="step-body">
+        <div class="step-title">Create API Gateway + Wire Everything</div>
+        <div class="step-desc">Create a POST /chat endpoint in API Gateway. Enable throttling (e.g. 100 req/sec max) to protect from abuse and cost spikes. Point it at your Lambda.</div>
+        <div class="code-block"># Using AWS CLI
+aws apigatewayv2 create-api \
+  --name "MalayalamChatbotAPI" \
+  --protocol-type HTTP \
+  --target arn:aws:lambda:ap-south-1:&lt;account&gt;:function:chatbot-handler
+
+# Add throttling to prevent bill spikes
+aws apigatewayv2 create-stage \
+  --api-id &lt;api-id&gt; \
+  --stage-name prod \
+  --default-route-settings \
+    ThrottlingBurstLimit=50,ThrottlingRateLimit=20</div>
+        <div class="step-tags">
+          <span class="stag stag-aws">API Gateway</span>
+          <span class="stag stag-green">Rate limiting</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num" style="background:rgba(0,229,160,0.1);color:var(--green)">✓</div>
+      <div class="step-body" style="border-color:rgba(0,229,160,0.2)">
+        <div class="step-title" style="color:var(--green)">Done — you now have a production system</div>
+        <div class="step-desc">Your endpoint is live at <code style="color:var(--aws)">https://&lt;id&gt;.execute-api.ap-south-1.amazonaws.com/prod/chat</code>. Connect this to WhatsApp Business API, your website widget, or mobile app. All logs go to CloudWatch automatically.</div>
+        <div class="step-tags">
+          <span class="stag stag-green">Live endpoint</span>
+          <span class="stag stag-blue">WhatsApp ready</span>
+          <span class="stag stag-aws">Auto-scaling</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- TAB 4 — BEFORE vs AFTER -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div id="tab-compare" class="tab-content">
+  <div class="section">
+    <div class="sec-title">CLI Script vs Production AWS</div>
+    <table class="comp-table">
+      <thead>
+        <tr>
+          <th>Attribute</th>
+          <th>❌ Current (CLI)</th>
+          <th>✅ Production (AWS)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Users</strong></td>
+          <td class="before">1 user at a time (blocking loop)</td>
+          <td class="after">Thousands simultaneously (Lambda scales)</td>
+        </tr>
+        <tr>
+          <td><strong>Availability</strong></td>
+          <td class="before">Only when your laptop is on</td>
+          <td class="after">24/7, 99.9% uptime SLA</td>
+        </tr>
+        <tr>
+          <td><strong>HF Model cold start</strong></td>
+          <td class="before">5–6 seconds every run</td>
+          <td class="after">0ms — model always warm in ECS</td>
+        </tr>
+        <tr>
+          <td><strong>API Key security</strong></td>
+          <td class="before">.env file, risk of git exposure</td>
+          <td class="after">AWS Secrets Manager, encrypted, IAM-gated</td>
+        </tr>
+        <tr>
+          <td><strong>Repeat questions</strong></td>
+          <td class="before">Claude called every time — billed</td>
+          <td class="after">Redis cache hit — ₹0 Claude cost</td>
+        </tr>
+        <tr>
+          <td><strong>Interface</strong></td>
+          <td class="before">Terminal only</td>
+          <td class="after">WhatsApp, Web widget, Mobile app</td>
+        </tr>
+        <tr>
+          <td><strong>Error recovery</strong></td>
+          <td class="before">App crashes, manual restart</td>
+          <td class="after">Auto-retry, fallback reply, never crashes</td>
+        </tr>
+        <tr>
+          <td><strong>Monitoring</strong></td>
+          <td class="before">print() to terminal — lost on exit</td>
+          <td class="after">CloudWatch: persistent logs, alerts, dashboards</td>
+        </tr>
+        <tr>
+          <td><strong>Deployment</strong></td>
+          <td class="before">Manual — copy files, run on laptop</td>
+          <td class="after">Push to GitHub → auto deploy via CodePipeline</td>
+        </tr>
+        <tr>
+          <td><strong>Cost when idle</strong></td>
+          <td class="before">Laptop running = electricity cost</td>
+          <td class="after">Lambda scales to 0 — you pay nothing</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- TAB 5 — COST -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div id="tab-cost" class="tab-content">
+  <div class="section">
+    <div class="sec-title">Estimated Monthly AWS Cost (10K messages/month)</div>
+    <div class="cost-grid">
+      <div class="cost-card" data-label="API Gateway">
+        <div class="cost-num" style="color:var(--aws)">~₹0</div>
+        <div class="cost-sub">Free tier: 1M calls/month</div>
+      </div>
+      <div class="cost-card" data-label="AWS Lambda">
+        <div class="cost-num" style="color:var(--aws)">~₹0</div>
+        <div class="cost-sub">Free tier: 1M req + 400K GB-sec</div>
+      </div>
+      <div class="cost-card" data-label="ECS Fargate (HF model)">
+        <div class="cost-num" style="color:var(--yellow)">~₹800</div>
+        <div class="cost-sub">0.25 vCPU, 1GB RAM always-on</div>
+      </div>
+      <div class="cost-card" data-label="ElastiCache Redis">
+        <div class="cost-num" style="color:var(--yellow)">~₹600</div>
+        <div class="cost-sub">cache.t4g.micro — smallest node</div>
+      </div>
+      <div class="cost-card" data-label="Secrets Manager">
+        <div class="cost-num" style="color:var(--green)">~₹35</div>
+        <div class="cost-sub">₹30/secret/month + API calls</div>
+      </div>
+      <div class="cost-card" data-label="CloudWatch">
+        <div class="cost-num" style="color:var(--green)">~₹50</div>
+        <div class="cost-sub">Logs + basic dashboard</div>
+      </div>
+      <div class="cost-card" data-label="Claude API (with cache)">
+        <div class="cost-num" style="color:var(--green)">~₹300</div>
+        <div class="cost-sub">~50% cache hit rate vs ₹600</div>
+      </div>
+      <div class="cost-card" data-label="Total AWS + Claude">
+        <div class="cost-num" style="color:var(--green)">~₹1,785</div>
+        <div class="cost-sub">Full production, 10K msgs/month</div>
+      </div>
+    </div>
+    <div style="margin-top:18px;padding:14px 18px;background:var(--card);border:1px solid var(--border);border-radius:5px;font-size:11.5px;color:var(--muted);line-height:1.7;">
+      💡 <strong style="color:var(--text)">Tip:</strong> Use <strong style="color:var(--aws)">ap-south-1 (Mumbai)</strong> region — closest to Kerala, lowest latency for your students, and lower data transfer costs than US regions. Start with smallest ECS + Redis sizes and scale up only when needed.
+    </div>
+  </div>
+</div>
+
+<script>
+  function showTab(name) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.querySelector(`[onclick="showTab('${name}')"]`).classList.add('active');
+    document.getElementById(`tab-${name}`).classList.add('active');
+  }
+</script>
+</body>
+</html>

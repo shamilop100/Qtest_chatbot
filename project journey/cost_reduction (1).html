@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>API Cost Reduction Guide</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080b10;
+    --surface: #0f1319;
+    --card: #141920;
+    --border: #1e2535;
+    --red: #ff4d6d;
+    --green: #00e5a0;
+    --orange: #ffaa00;
+    --blue: #4d9fff;
+    --purple: #a78bfa;
+    --text: #dde3f0;
+    --muted: #5a6480;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    padding: 48px 20px 80px;
+  }
+
+  header { text-align: center; margin-bottom: 56px; }
+  .pill {
+    display: inline-block;
+    background: rgba(0,229,160,0.08);
+    border: 1px solid rgba(0,229,160,0.2);
+    color: var(--green);
+    font-size: 10px; letter-spacing: 3px;
+    text-transform: uppercase;
+    padding: 5px 14px; border-radius: 2px;
+    margin-bottom: 16px;
+  }
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(24px, 4vw, 40px);
+    font-weight: 800; line-height: 1.1;
+    margin-bottom: 8px;
+  }
+  h1 em { color: var(--green); font-style: normal; }
+  .sub { color: var(--muted); font-size: 12px; }
+
+  /* SAVINGS BAR */
+  .savings-bar {
+    max-width: 900px;
+    margin: 0 auto 52px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 12px;
+  }
+  .scard {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 18px 16px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .scard::before {
+    content: ''; position: absolute;
+    top: 0; left: 0; right: 0; height: 2px;
+  }
+  .s-green::before { background: var(--green); }
+  .s-orange::before { background: var(--orange); }
+  .s-blue::before { background: var(--blue); }
+  .s-purple::before { background: var(--purple); }
+  .scard-num {
+    font-family: 'Syne', sans-serif;
+    font-size: 28px; font-weight: 800;
+    margin-bottom: 4px;
+  }
+  .scard-label { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
+
+  /* SECTION */
+  .section { max-width: 900px; margin: 0 auto 44px; }
+  .sec-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 11px; font-weight: 700;
+    letter-spacing: 2.5px; text-transform: uppercase;
+    color: var(--muted);
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 16px;
+  }
+  .sec-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  /* PROBLEM CARDS */
+  .prob-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    margin-bottom: 14px;
+    overflow: hidden;
+  }
+  .prob-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    user-select: none;
+  }
+  .prob-header:hover { background: rgba(255,255,255,0.02); }
+  .prob-num {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700;
+    flex-shrink: 0;
+  }
+  .num-red { background: rgba(255,77,109,0.15); color: var(--red); }
+  .num-orange { background: rgba(255,170,0,0.12); color: var(--orange); }
+  .num-blue { background: rgba(77,159,255,0.12); color: var(--blue); }
+  .num-purple { background: rgba(167,139,250,0.12); color: var(--purple); }
+
+  .prob-meta { flex: 1; }
+  .prob-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 14px; font-weight: 700;
+    margin-bottom: 3px;
+  }
+  .prob-subtitle { font-size: 11px; color: var(--muted); }
+
+  .saving-tag {
+    font-size: 11px; font-weight: 700;
+    padding: 4px 10px; border-radius: 3px;
+    white-space: nowrap;
+  }
+  .save-high { background: rgba(0,229,160,0.1); color: var(--green); }
+  .save-med  { background: rgba(255,170,0,0.1); color: var(--orange); }
+  .save-low  { background: rgba(77,159,255,0.1); color: var(--blue); }
+
+  .prob-body { padding: 20px; }
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+  @media (max-width: 600px) { .two-col { grid-template-columns: 1fr; } }
+
+  .col-label {
+    font-size: 10px; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .code-block {
+    background: rgba(0,0,0,0.4);
+    border-radius: 4px;
+    padding: 12px;
+    font-size: 11px; line-height: 1.7;
+    border-left: 2px solid transparent;
+    white-space: pre-wrap; word-break: break-word;
+  }
+  .code-bad  { border-color: var(--red);   color: #ff8fa0; }
+  .code-good { border-color: var(--green); color: #7fffd4; }
+
+  .explain {
+    background: rgba(255,255,255,0.02);
+    border-radius: 4px;
+    padding: 12px 14px;
+    font-size: 11.5px;
+    color: var(--muted);
+    line-height: 1.7;
+    border-left: 2px solid var(--border);
+  }
+  .explain strong { color: var(--text); }
+
+  /* QUICK WINS TABLE */
+  .qw-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  .qw-table th {
+    padding: 11px 16px;
+    text-align: left;
+    font-size: 10px; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--muted);
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+  .qw-table td {
+    padding: 13px 16px;
+    border-bottom: 1px solid rgba(30,37,53,0.7);
+    vertical-align: middle;
+  }
+  .qw-table tr:last-child td { border-bottom: none; }
+  .qw-table tr:hover td { background: rgba(255,255,255,0.015); }
+  .check { color: var(--green); font-size: 14px; }
+  .cross { color: var(--red);   font-size: 14px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="pill">Cost Optimization</div>
+  <h1>Reduce Claude API Billing<br><em>Maximum Savings</em></h1>
+  <p class="sub">Every token costs money — here's where yours are being wasted</p>
+</header>
+
+<!-- SAVINGS SUMMARY -->
+<div class="savings-bar">
+  <div class="scard s-green">
+    <div class="scard-num" style="color:var(--green)">~60%</div>
+    <div class="scard-label">Input Token Reduction</div>
+  </div>
+  <div class="scard s-orange">
+    <div class="scard-num" style="color:var(--orange)">~40%</div>
+    <div class="scard-label">Output Token Reduction</div>
+  </div>
+  <div class="scard s-blue">
+    <div class="scard-num" style="color:var(--blue)">0%</div>
+    <div class="scard-label">Cache Hit Cost (vs full)</div>
+  </div>
+  <div class="scard s-purple">
+    <div class="scard-num" style="color:var(--purple)">₹0</div>
+    <div class="scard-label">Cost for Repeat Queries</div>
+  </div>
+</div>
+
+<!-- PROBLEM 1 -->
+<div class="section">
+  <div class="sec-title">Problems & Solutions</div>
+
+  <div class="prob-card">
+    <div class="prob-header">
+      <div class="prob-num num-red">1</div>
+      <div class="prob-meta">
+        <div class="prob-title">System prompt sent on EVERY message</div>
+        <div class="prob-subtitle">assistant_prompt.txt · ~120 tokens × every API call</div>
+      </div>
+      <span class="saving-tag save-high">🔴 Biggest Waste</span>
+    </div>
+    <div class="prob-body">
+      <div class="two-col">
+        <div>
+          <div class="col-label">❌ What's happening</div>
+          <div class="code-block code-bad">client.messages.create(
+  model=MODEL_NAME,
+  system=SYSTEM_PROMPT,  # ← full prompt
+  max_tokens=250,        #   re-sent every
+  messages=[{...}]       #   single call
+)</div>
+        </div>
+        <div>
+          <div class="col-label">✅ Fix — use Prompt Caching</div>
+          <div class="code-block code-good">client.messages.create(
+  model=MODEL_NAME,
+  system=[{
+    "type": "text",
+    "text": SYSTEM_PROMPT,
+    "cache_control": {
+      "type": "ephemeral"  # ← cached!
+    }
+  }],
+  max_tokens=250,
+  messages=[{...}]
+)</div>
+        </div>
+      </div>
+      <div class="explain">
+        <strong>Why it matters:</strong> Anthropic's Prompt Caching charges only <strong>10% of normal input cost</strong> for cached tokens after the first call. Your system prompt is ~120 tokens. At 10,000 messages/month that's ~1.2M tokens — caching saves 90% of that cost. One line change, massive saving.
+      </div>
+    </div>
+  </div>
+
+  <!-- PROBLEM 2 -->
+  <div class="prob-card">
+    <div class="prob-header">
+      <div class="prob-num num-red">2</div>
+      <div class="prob-meta">
+        <div class="prob-title">max_tokens=250 is too high for a 60-word reply</div>
+        <div class="prob-subtitle">claude_service.py · you're paying to reserve tokens you never use</div>
+      </div>
+      <span class="saving-tag save-high">🔴 Direct Waste</span>
+    </div>
+    <div class="prob-body">
+      <div class="two-col">
+        <div>
+          <div class="col-label">❌ Problem</div>
+          <div class="code-block code-bad">max_tokens=250
+# Your prompt says reply
+# must be under 60 words
+# (~80 tokens max).
+# You're reserving 250 —
+# 3x more than needed.</div>
+        </div>
+        <div>
+          <div class="col-label">✅ Fix</div>
+          <div class="code-block code-good">max_tokens=120
+# INTENT line  ≈ 15 tokens
+# REPLY 60 words ≈ 80 tokens
+# Safety buffer  ≈ 25 tokens
+# Total needed:  ≈ 120 max
+# Saves ~50% output budget</div>
+        </div>
+      </div>
+      <div class="explain">
+        <strong>Why it matters:</strong> max_tokens doesn't directly cost money — you pay for tokens <em>generated</em>, not reserved. But setting it accurately prevents Claude from rambling beyond your 60-word limit, keeping output consistently short and cheap. Combined with <strong>temperature=0.3</strong>, Claude stays tight and on-format.
+      </div>
+    </div>
+  </div>
+
+  <!-- PROBLEM 3 -->
+  <div class="prob-card">
+    <div class="prob-header">
+      <div class="prob-num num-orange">3</div>
+      <div class="prob-meta">
+        <div class="prob-title">No cache for repeated questions</div>
+        <div class="prob-subtitle">main.py · "fee ethra?" asked 100x → Claude called 100x</div>
+      </div>
+      <span class="saving-tag save-high">🟠 High Saving</span>
+    </div>
+    <div class="prob-body">
+      <div class="two-col">
+        <div>
+          <div class="col-label">❌ Problem</div>
+          <div class="code-block code-bad"># Every message hits Claude API
+# Students ask the same things:
+# "fee ethra?"
+# "online aano offline?"
+# "certificate kittuo?"
+# Each → 1 API call → billed</div>
+        </div>
+        <div>
+          <div class="col-label">✅ Fix — in-memory reply cache</div>
+          <div class="code-block code-good">import hashlib
+
+_cache = {}
+
+def ask_claude(message, hint):
+  key = hashlib.md5(
+    f"{message}{hint}".encode()
+  ).hexdigest()
+
+  if key in _cache:
+    return _cache[key]  # free!
+
+  result = _call_claude(...)
+  _cache[key] = result
+  return result</div>
+        </div>
+      </div>
+      <div class="explain">
+        <strong>Why it matters:</strong> Training institute students ask the <em>same 10–15 questions</em> repeatedly. Fee, duration, online/offline, placement, demo — these repeat constantly. Caching identical queries means <strong>zero API cost</strong> for repeat questions. For a busy day with 200 messages, easily 40–60% could be cache hits.
+      </div>
+    </div>
+  </div>
+
+  <!-- PROBLEM 4 -->
+  <div class="prob-card">
+    <div class="prob-header">
+      <div class="prob-num num-orange">4</div>
+      <div class="prob-meta">
+        <div class="prob-title">Sending unnecessary context in the prompt</div>
+        <div class="prob-subtitle">claude_service.py · extra words = extra tokens billed</div>
+      </div>
+      <span class="saving-tag save-med">🟠 Medium Saving</span>
+    </div>
+    <div class="prob-body">
+      <div class="two-col">
+        <div>
+          <div class="col-label">❌ Verbose prompt content</div>
+          <div class="code-block code-bad">content = f"""
+Customer message: {message}
+LOCAL_INTENT_HINT: {hint}
+Note: The hint may be wrong.
+Trust the message, not the hint.
+"""
+# ~20 extra tokens per call
+# = 200,000 extra tokens/10K msgs</div>
+        </div>
+        <div>
+          <div class="col-label">✅ Trim to minimum</div>
+          <div class="code-block code-good">content = (
+  f"MSG: {message}\n"
+  f"HINT: {hint}"
+)
+# Claude already knows from
+# system prompt what HINT means.
+# No need to repeat instructions.</div>
+        </div>
+      </div>
+      <div class="explain">
+        <strong>Why it matters:</strong> Your system prompt already explains what LOCAL_INTENT_HINT means and that it may be wrong. Repeating "Note: hint may be wrong" in every user message adds ~15 tokens per call. At 10K messages/month = <strong>150,000 wasted tokens</strong>.
+      </div>
+    </div>
+  </div>
+
+  <!-- PROBLEM 5 -->
+  <div class="prob-card">
+    <div class="prob-header">
+      <div class="prob-num num-blue">5</div>
+      <div class="prob-meta">
+        <div class="prob-title">Using Claude for greetings ("hi", "hello")</div>
+        <div class="prob-subtitle">main.py · simple greetings don't need an API call at all</div>
+      </div>
+      <span class="saving-tag save-med">🔵 Easy Win</span>
+    </div>
+    <div class="prob-body">
+      <div class="two-col">
+        <div>
+          <div class="col-label">❌ Every message hits Claude</div>
+          <div class="code-block code-bad">user = input("User: ")
+lang, hint = get_hint(user)
+reply = ask_claude(user, hint)
+# "hi" → full API call 💸</div>
+        </div>
+        <div>
+          <div class="col-label">✅ Short-circuit known intents</div>
+          <div class="code-block code-good">STATIC_REPLIES = {
+  "greeting": "നമസ്കാരം! എങ്ങനെ സഹായിക്കാം?",
+}
+
+lang, hint = get_hint(user)
+
+if hint in STATIC_REPLIES:
+  print(STATIC_REPLIES[hint])
+else:
+  intent, reply = ask_claude(
+    user, hint
+  )</div>
+        </div>
+      </div>
+      <div class="explain">
+        <strong>Why it matters:</strong> "Hi", "Hello", "Namaskaram" — these are templated responses. No reasoning needed. Skip Claude entirely and reply instantly for free. You can expand STATIC_REPLIES to cover any high-confidence, fixed-answer intents your institute has.
+      </div>
+    </div>
+  </div>
+
+  <!-- PROBLEM 6 -->
+  <div class="prob-card">
+    <div class="prob-header">
+      <div class="prob-num num-blue">6</div>
+      <div class="prob-meta">
+        <div class="prob-title">Model not pinned to cheapest suitable option</div>
+        <div class="prob-subtitle">config.py · old Haiku is fine but newer is cheaper per token</div>
+      </div>
+      <span class="saving-tag save-low">🔵 Low Effort</span>
+    </div>
+    <div class="prob-body">
+      <div class="two-col">
+        <div>
+          <div class="col-label">❌ Current</div>
+          <div class="code-block code-bad">MODEL_NAME = \
+  "claude-3-haiku-20240307"
+# Older model, higher per-token
+# cost than current Haiku</div>
+        </div>
+        <div>
+          <div class="col-label">✅ Fix</div>
+          <div class="code-block code-good">MODEL_NAME = \
+  "claude-haiku-4-5-20251001"
+# Latest Haiku — faster,
+# cheaper input/output tokens,
+# better Malayalam understanding</div>
+        </div>
+      </div>
+      <div class="explain">
+        <strong>Why it matters:</strong> claude-haiku-4-5 has lower per-token pricing than claude-3-haiku and handles Malayalam better. One config change — no code changes needed anywhere else.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- QUICK WINS TABLE -->
+<div class="section">
+  <div class="sec-title">All Fixes at a Glance</div>
+  <table class="qw-table" style="background:var(--card);border:1px solid var(--border);border-radius:6px;overflow:hidden;">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Fix</th>
+        <th>File</th>
+        <th>Effort</th>
+        <th>Saving</th>
+        <th>Currently Done?</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>1</td>
+        <td>Prompt Caching (cache_control)</td>
+        <td>claude_service.py</td>
+        <td>5 min</td>
+        <td style="color:var(--green);font-weight:700">~90% input tokens</td>
+        <td class="cross">✗</td>
+      </tr>
+      <tr>
+        <td>2</td>
+        <td>Lower max_tokens to 120</td>
+        <td>claude_service.py</td>
+        <td>1 min</td>
+        <td style="color:var(--green);font-weight:700">Prevents overrun</td>
+        <td class="cross">✗</td>
+      </tr>
+      <tr>
+        <td>3</td>
+        <td>In-memory reply cache (md5 key)</td>
+        <td>claude_service.py</td>
+        <td>15 min</td>
+        <td style="color:var(--green);font-weight:700">40–60% of calls free</td>
+        <td class="cross">✗</td>
+      </tr>
+      <tr>
+        <td>4</td>
+        <td>Trim user prompt to MSG+HINT only</td>
+        <td>claude_service.py</td>
+        <td>1 min</td>
+        <td style="color:var(--orange);font-weight:700">~150K tokens/month</td>
+        <td class="cross">✗</td>
+      </tr>
+      <tr>
+        <td>5</td>
+        <td>Static replies for greetings</td>
+        <td>main.py</td>
+        <td>10 min</td>
+        <td style="color:var(--orange);font-weight:700">Skip API for ~10% msgs</td>
+        <td class="cross">✗</td>
+      </tr>
+      <tr>
+        <td>6</td>
+        <td>Upgrade to claude-haiku-4-5</td>
+        <td>config.py</td>
+        <td>1 min</td>
+        <td style="color:var(--blue);font-weight:700">Lower per-token rate</td>
+        <td class="cross">✗</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+</body>
+</html>

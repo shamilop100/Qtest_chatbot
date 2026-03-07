@@ -1,0 +1,8 @@
+anthropic
+litellm
+transformers
+torch
+python-dotenv
+fastapi
+uvicorn
+pydantic

@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Code Improvement Comparison</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0b0e13;
+    --surface: #13171f;
+    --card: #181d28;
+    --border: #252c3d;
+    --red: #ff4d6d;
+    --green: #00e5a0;
+    --orange: #ff9500;
+    --blue: #4d9fff;
+    --text: #dde3f0;
+    --muted: #6b7694;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    padding: 48px 20px 80px;
+    min-height: 100vh;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 52px;
+  }
+  .pill {
+    display: inline-block;
+    background: rgba(255,77,109,0.1);
+    border: 1px solid rgba(255,77,109,0.3);
+    color: var(--red);
+    font-size: 10px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    padding: 5px 14px;
+    border-radius: 2px;
+    margin-bottom: 16px;
+  }
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(22px, 4vw, 38px);
+    font-weight: 800;
+    line-height: 1.15;
+    margin-bottom: 8px;
+  }
+  h1 em { color: var(--green); font-style: normal; }
+  .sub { color: var(--muted); font-size: 12px; letter-spacing: 0.5px; }
+
+  /* FILE TABS */
+  .file-section { max-width: 1080px; margin: 0 auto 48px; }
+  .file-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .file-name {
+    font-family: 'Syne', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .file-tag {
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 2px;
+  }
+  .tag-hf { background: rgba(77,159,255,0.12); color: var(--blue); border: 1px solid rgba(77,159,255,0.25); }
+  .tag-cl { background: rgba(255,149,0,0.12); color: var(--orange); border: 1px solid rgba(255,149,0,0.25); }
+
+  /* TABLE */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  thead tr {
+    background: var(--surface);
+    border-bottom: 2px solid var(--border);
+  }
+  th {
+    padding: 13px 18px;
+    text-align: left;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 500;
+  }
+  tbody tr {
+    border-bottom: 1px solid rgba(37,44,61,0.6);
+    transition: background 0.15s;
+  }
+  tbody tr:hover { background: rgba(255,255,255,0.02); }
+  tbody tr:last-child { border-bottom: none; }
+  td {
+    padding: 16px 18px;
+    vertical-align: top;
+    line-height: 1.6;
+  }
+
+  /* COLUMNS */
+  .col-num {
+    width: 44px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .col-problem { width: 22%; }
+  .col-before { width: 26%; }
+  .col-after { width: 26%; }
+  .col-impact { width: 16%; }
+
+  .prob-title {
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+  .prob-desc { color: var(--muted); font-size: 11px; line-height: 1.55; }
+
+  /* CODE SNIPPETS */
+  .code-block {
+    background: rgba(0,0,0,0.35);
+    border-radius: 3px;
+    padding: 8px 10px;
+    font-size: 10.5px;
+    line-height: 1.65;
+    border-left: 2px solid transparent;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .code-bad { border-color: var(--red); color: #ff8fa0; }
+  .code-good { border-color: var(--green); color: #7fffd4; }
+
+  /* IMPACT BADGE */
+  .impact {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 3px 9px;
+    border-radius: 2px;
+    margin-bottom: 6px;
+  }
+  .imp-high { background: rgba(255,77,109,0.12); color: var(--red); }
+  .imp-med  { background: rgba(255,149,0,0.12);  color: var(--orange); }
+  .imp-low  { background: rgba(0,229,160,0.1);   color: var(--green); }
+  .imp-desc { font-size: 10.5px; color: var(--muted); line-height: 1.5; }
+
+  /* SUMMARY ROW */
+  .summary {
+    max-width: 1080px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 14px;
+  }
+  .sum-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 18px 20px;
+    text-align: center;
+  }
+  .sum-num {
+    font-family: 'Syne', sans-serif;
+    font-size: 32px;
+    font-weight: 800;
+    margin-bottom: 4px;
+  }
+  .sum-label { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
+
+  .section-divider {
+    max-width: 1080px;
+    margin: 0 auto 14px;
+    font-family: 'Syne', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .section-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="pill">Before vs After</div>
+  <h1>Code Problems &<br><em>How They Were Fixed</em></h1>
+  <p class="sub">hf_local.py · claude_service.py · full breakdown</p>
+</header>
+
+<!-- ── hf_local.py ── -->
+<div class="section-divider">hf_local.py</div>
+<div class="file-section">
+  <div class="file-header">
+    <span class="file-name">hf_local.py</span>
+    <span class="file-tag tag-hf">HuggingFace · Intent Detection</span>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Problem</th>
+        <th>❌ Before</th>
+        <th>✅ After</th>
+        <th>Impact</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="col-num">1</td>
+        <td class="col-problem">
+          <div class="prob-title">Model loads on import</div>
+          <div class="prob-desc">pipeline() runs at module load time — 5–6 second freeze before the app does anything</div>
+        </td>
+        <td class="col-before">
+          <div class="code-block code-bad">lang_detector = pipeline(
+  "text-classification",
+  model="papluca/..."
+)
+# Runs IMMEDIATELY on import</div>
+        </td>
+        <td class="col-after">
+          <div class="code-block code-good">_lang_detector = None
+
+def _get_lang_detector():
+  global _lang_detector
+  if _lang_detector is None:
+    _lang_detector = pipeline(...)
+  return _lang_detector
+# Loads only on first message</div>
+        </td>
+        <td class="col-impact">
+          <span class="impact imp-high">🔴 High</span>
+          <div class="imp-desc">App starts instantly. Model loads once, cached forever.</div>
+        </td>
+      </tr>
+      <tr>
+        <td class="col-num">2</td>
+        <td class="col-problem">
+          <div class="prob-title">Only 4 of 9 intents detected</div>
+          <div class="prob-desc">syllabus, placement, certificate, demo, greeting all fell through to "other" — useless hint to Claude</div>
+        </td>
+        <td class="col-before">
+          <div class="code-block code-bad">if contains(t, PRICING_WORDS):
+  hint = "pricing"
+elif contains(t, DURATION_WORDS):
+  hint = "duration"
+elif contains(t, ONLINE_WORDS):
+  hint = "online_offline"
+elif contains(t, LOCATION_WORDS):
+  hint = "location"
+else:
+  hint = "other"  # ← 5 intents always land here</div>
+        </td>
+        <td class="col-after">
+          <div class="code-block code-good">_INTENT_MAP = [
+  ("greeting",      GREETING_WORDS),
+  ("pricing",       PRICING_WORDS),
+  ("duration",      DURATION_WORDS),
+  ("syllabus",      SYLLABUS_WORDS),
+  ("placement",     PLACEMENT_WORDS),
+  ("certificate",   CERTIFICATE_WORDS),
+  ("demo",          DEMO_WORDS),
+  ("online_offline",ONLINE_WORDS),
+  ("location",      LOCATION_WORDS),
+]
+# All 9 intents covered</div>
+        </td>
+        <td class="col-impact">
+          <span class="impact imp-high">🔴 High</span>
+          <div class="imp-desc">Claude now gets useful hints for all query types.</div>
+        </td>
+      </tr>
+      <tr>
+        <td class="col-num">3</td>
+        <td class="col-problem">
+          <div class="prob-title">Tiny keyword lists miss real Manglish</div>
+          <div class="prob-desc">"enthanu fee", "ethra naal", "job kittuo" — common student phrases not matched at all</div>
+        </td>
+        <td class="col-before">
+          <div class="code-block code-bad">PRICING_WORDS = [
+  "ഫീസ്","വില",
+  "charge","rate","amount"
+]
+# Only 5 words</div>
+        </td>
+        <td class="col-after">
+          <div class="code-block code-good">PRICING_WORDS = [
+  "ഫീസ്","വില","charge","rate",
+  "amount","fee","fees","price",
+  "cost","paisa","rupee","rs",
+  "money","ethra aanu","how much",
+  "enthanu","എത്ര രൂപ"
+]
+# 14+ real-world phrases</div>
+        </td>
+        <td class="col-impact">
+          <span class="impact imp-high">🔴 High</span>
+          <div class="imp-desc">Matches real student input in Malayalam, English, Manglish.</div>
+        </td>
+      </tr>
+      <tr>
+        <td class="col-num">4</td>
+        <td class="col-problem">
+          <div class="prob-title">contains() uses slow manual loop</div>
+          <div class="prob-desc">For loop with early return works, but is verbose and not Pythonic</div>
+        </td>
+        <td class="col-before">
+          <div class="code-block code-bad">def contains(text, keywords):
+  for w in keywords:
+    if w in text:
+      return True
+  return False</div>
+        </td>
+        <td class="col-after">
+          <div class="code-block code-good">def contains(text, keywords):
+  return any(
+    w in text for w in keywords
+  )</div>
+        </td>
+        <td class="col-impact">
+          <span class="impact imp-low">🟢 Low</span>
+          <div class="imp-desc">Cleaner, shorter, same performance.</div>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ── claude_service.py ── -->
+<div class="section-divider">claude_service.py</div>
+<div class="file-section">
+  <div class="file-header">
+    <span class="file-name">claude_service.py</span>
+    <span class="file-tag tag-cl">Claude API · Response Handling</span>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Problem</th>
+        <th>❌ Before</th>
+        <th>✅ After</th>
+        <th>Impact</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="col-num">5</td>
+        <td class="col-problem">
+          <div class="prob-title">No temperature set → inconsistent format</div>
+          <div class="prob-desc">Default temp=1.0 makes Claude vary its output format randomly, breaking INTENT/REPLY parsing</div>
+        </td>
+        <td class="col-before">
+          <div class="code-block code-bad">response = client.messages.create(
+  model=MODEL_NAME,
+  system=SYSTEM_PROMPT,
+  max_tokens=250,
+  messages=[...]
+)
+# temperature defaults to 1.0</div>
+        </td>
+        <td class="col-after">
+          <div class="code-block code-good">response = client.messages.create(
+  model=MODEL_NAME,
+  system=SYSTEM_PROMPT,
+  max_tokens=250,
+  temperature=0.3,  # ← structured output
+  messages=[...]
+)</div>
+        </td>
+        <td class="col-impact">
+          <span class="impact imp-high">🔴 High</span>
+          <div class="imp-desc">Claude follows INTENT/REPLY format consistently every time.</div>
+        </td>
+      </tr>
+      <tr>
+        <td class="col-num">6</td>
+        <td class="col-problem">
+          <div class="prob-title">Zero error handling — any failure crashes the loop</div>
+          <div class="prob-desc">Rate limit, timeout, or connection drop kills main.py entirely with an unhandled exception</div>
+        </td>
+        <td class="col-before">
+          <div class="code-block code-bad">response = client.messages.create(...)
+return response.content[0].text
+# API error → entire app crashes 💥</div>
+        </td>
+        <td class="col-after">
+          <div class="code-block code-good">try:
+  response = client.messages.create(...)
+  return response.content[0].text
+except anthropic.RateLimitError:
+  time.sleep(delay)   # retry
+except anthropic.APIConnectionError:
+  time.sleep(delay)   # retry
+except anthropic.APIStatusError:
+  break               # don't retry 4xx
+# Returns FALLBACK_REPLY on failure</div>
+        </td>
+        <td class="col-impact">
+          <span class="impact imp-high">🔴 High</span>
+          <div class="imp-desc">App stays alive. User gets polite Malayalam error message instead of crash.</div>
+        </td>
+      </tr>
+      <tr>
+        <td class="col-num">7</td>
+        <td class="col-problem">
+          <div class="prob-title">Raw text returned — INTENT/REPLY shown to user</div>
+          <div class="prob-desc">main.py prints the full raw Claude response including "INTENT: pricing\nREPLY:" labels</div>
+        </td>
+        <td class="col-before">
+          <div class="code-block code-bad">return response.content[0].text
+
+# main.py prints:
+# INTENT: pricing
+# REPLY: ഞങ്ങളുടെ കോഴ്സ്...</div>
+        </td>
+        <td class="col-after">
+          <div class="code-block code-good">def parse_response(raw):
+  for line in raw.splitlines():
+    if line.startswith("INTENT:"):
+      intent = line.split(":",1)[1].strip()
+    elif line.startswith("REPLY:"):
+      reply = line.split(":",1)[1].strip()
+  return intent, reply
+
+# main.py prints only:
+# ഞങ്ങളുടെ കോഴ്സ്...</div>
+        </td>
+        <td class="col-impact">
+          <span class="impact imp-med">🟠 Med</span>
+          <div class="imp-desc">Clean output for users. Intent available separately for logging/analytics.</div>
+        </td>
+      </tr>
+      <tr>
+        <td class="col-num">8</td>
+        <td class="col-problem">
+          <div class="prob-title">Prompt doesn't tell Claude to distrust the hint</div>
+          <div class="prob-desc">Claude sometimes over-weights LOCAL_INTENT_HINT even when it's wrong, giving wrong replies</div>
+        </td>
+        <td class="col-before">
+          <div class="code-block code-bad">content = f"""
+Customer message: {message}
+LOCAL_INTENT_HINT: {hint}
+"""</div>
+        </td>
+        <td class="col-after">
+          <div class="code-block code-good">content = (
+  f"Customer message: {message}\n"
+  f"LOCAL_INTENT_HINT: {hint}\n"
+  f"Note: The hint may be wrong. "
+  f"Trust the message, not the hint."
+)</div>
+        </td>
+        <td class="col-impact">
+          <span class="impact imp-med">🟠 Med</span>
+          <div class="imp-desc">Claude's own reasoning wins over a bad local hint → better intent accuracy.</div>
+        </td>
+      </tr>
+      <tr>
+        <td class="col-num">9</td>
+        <td class="col-problem">
+          <div class="prob-title">File opened without closing (no `with` block)</div>
+          <div class="prob-desc">open() without with leaves the file handle unclosed — bad practice, can cause issues on some systems</div>
+        </td>
+        <td class="col-before">
+          <div class="code-block code-bad">SYSTEM_PROMPT = open(
+  "assistant_prompt.txt",
+  encoding="utf-8"
+).read()
+# File handle never closed</div>
+        </td>
+        <td class="col-after">
+          <div class="code-block code-good">with open("assistant_prompt.txt",
+          encoding="utf-8") as f:
+  SYSTEM_PROMPT = f.read()
+# Auto-closed after read ✓</div>
+        </td>
+        <td class="col-impact">
+          <span class="impact imp-low">🟢 Low</span>
+          <div class="imp-desc">Correct resource management. Raises clear error if file missing.</div>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- SUMMARY -->
+<div class="section-divider">Summary</div>
+<div class="summary">
+  <div class="sum-card">
+    <div class="sum-num" style="color:var(--red)">5</div>
+    <div class="sum-label">🔴 High Impact Fixes</div>
+  </div>
+  <div class="sum-card">
+    <div class="sum-num" style="color:var(--orange)">2</div>
+    <div class="sum-label">🟠 Medium Impact Fixes</div>
+  </div>
+  <div class="sum-card">
+    <div class="sum-num" style="color:var(--green)">2</div>
+    <div class="sum-label">🟢 Low Impact Fixes</div>
+  </div>
+  <div class="sum-card">
+    <div class="sum-num" style="color:var(--blue)">9</div>
+    <div class="sum-label">Total Improvements</div>
+  </div>
+</div>
+
+</body>
+</html>
