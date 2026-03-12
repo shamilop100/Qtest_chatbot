@@ -1,84 +1,34 @@
-# institute_data.py — Knowledge Engine
-# Single source of truth. No hallucination possible.
+# institute_data.py — Single source of truth
 
-COURSES = {
-    "manual":   {"name": "Manual Testing",                  "fee": 10000, "duration": "3 months"},
-    "selenium": {"name": "Java & Selenium Automation",      "fee": 18000, "duration": "3 months"},
-    "combined": {"name": "Java Selenium + Manual (Master)", "fee": 28000, "duration": "3 months"},
-}
+INSTITUTE_CONTEXT = """
+INSTITUTE: QTest Software Solution LLP
+LOCATION: Emerald Mall, Mavoor Road, Kozhikode, Kerala
+PHONE: 9961 544 424
+WEBSITE: www.qtestsolutions.com
 
-SYLLABUS = {
-    "manual":   ["Software Testing Fundamentals", "Test Case Writing",
-                 "Bug Reporting", "Jira", "Selenium IDE"],
-    "selenium": ["Core Java", "Selenium WebDriver", "TestNG", "Cucumber", "JMeter", "Jira"],
-    "combined": ["Core Java", "Selenium WebDriver", "TestNG", "Cucumber",
-                 "JMeter", "Jira", "Manual Testing", "Real-time Projects"],
-}
+COURSES:
+1. Manual Testing
+   - Fee: Rs.10,000
+   - Duration: 3 months
+   - Syllabus: Software Testing Fundamentals, Test Case Writing, Bug Reporting, Jira, Selenium IDE
 
-CONTACT = {
-    "phone":   "9961 544 424",
-    "website": "www.qtestsolutions.com",
-    "address": "Emerald Mall, Mavoor Road, Kozhikode",
-}
+2. Java & Selenium Automation
+   - Fee: Rs.18,000
+   - Duration: 3 months
+   - Syllabus: Core Java, Selenium WebDriver, TestNG, Cucumber, JMeter, Jira
 
-def get_answer(intent: str, course: str = None) -> str | None:
-    """
-    Knowledge Engine — returns answer if data exists, None if Claude needed.
-    Returns None only for: other / truly unknown questions
-    """
+3. Java Selenium + Manual Master (Combined)
+   - Fee: Rs.28,000
+   - Duration: 3 months
+   - Syllabus: Core Java, Selenium WebDriver, TestNG, Cucumber, JMeter, Jira, Manual Testing, Real-time Projects
 
-    if intent == "greeting":
-        return "Hello! Welcome to QTest Software Solutions 😊 How can I help you?"
+OTHER INFO:
+- Placement: 100% Placement Assistance provided to all students
+- Certificate: Industry-recognised Course Completion Certificate provided
+- Demo: Free demo class available, call 9961 544 424 to schedule
+- Batch modes: Online and Offline classes available
+- Special batches: Night batches and Sunday batches for working professionals
+"""
 
-    if intent == "location":
-        return (f"📍 {CONTACT['address']}\n"
-                f"📞 {CONTACT['phone']}\n"
-                f"🌐 {CONTACT['website']}")
-
-    if intent == "courses":
-        lines = ["We offer 3 courses:"]
-        for c in COURSES.values():
-            lines.append(f"• {c['name']} — ₹{c['fee']:,} ({c['duration']})")
-        lines.append("\nAsk me about syllabus, demo or placement 😊")
-        return "\n".join(lines)
-
-    if intent == "duration":
-        if course:
-            c = COURSES[course]
-            return f"{c['name']}: {c['duration']}"
-        return "All 3 courses are 3 months duration 😊"
-
-    if intent == "pricing":
-        if course:
-            c = COURSES[course]
-            return f"{c['name']} fee: ₹{c['fee']:,} (3 months) 😊"
-        lines = ["Course Fees:"]
-        for c in COURSES.values():
-            lines.append(f"• {c['name']} — ₹{c['fee']:,}")
-        return "\n".join(lines)
-
-    if intent == "syllabus":
-        target = course or "combined"
-        c = COURSES[target]
-        topics = "\n• ".join(SYLLABUS[target])
-        return f"{c['name']} syllabus:\n• {topics}"
-
-    if intent == "placement":
-        return ("✅ 100% Placement Assistance provided to all students.\n"
-                f"Call {CONTACT['phone']} for details.")
-
-    if intent == "certificate":
-        return ("✅ Industry-recognised Course Completion Certificate\n"
-                "provided upon successful course completion.")
-
-    if intent == "demo":
-        return (f"✅ Free Demo class available!\n"
-                f"Call {CONTACT['phone']} to schedule your session.")
-
-    if intent == "online_offline":
-        return ("We offer both Online and Offline classes.\n"
-                "🌙 Night batches available\n"
-                "📅 Sunday batches for working professionals\n"
-                f"Call {CONTACT['phone']} for batch timings.")
-
-    return None  # → Claude handles this
+def get_context() -> str:
+    return INSTITUTE_CONTEXT
